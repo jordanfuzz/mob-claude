@@ -1,6 +1,6 @@
-# Binaries
-mob-claude
-mob-claude-*
+# Binaries (at root only)
+/mob-claude
+/mob-claude-*
 *.exe
 
 # Build artifacts
