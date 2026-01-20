@@ -1,0 +1,21 @@
+# Binaries
+mob-claude
+mob-claude-*
+*.exe
+
+# Build artifacts
+/bin/
+/dist/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test
+coverage.out
