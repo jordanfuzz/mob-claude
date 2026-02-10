@@ -36,30 +36,48 @@ It manages plan files and generates AI-powered rotation summaries.`,
 
 	// Start command
 	startCmd := &cobra.Command{
-		Use:   "start [branch]",
+		Use:   "start [mob-flags...]",
 		Short: "Start or join a mob session",
-		Long:  "Wraps 'mob start', fetches the current plan, and initializes session tracking.",
-		Args:  cobra.MaximumNArgs(1),
-		RunE:  runStart,
+		Long: `Wraps 'mob start', fetches the current plan, and initializes session tracking.
+
+All arguments are passed through to mob.sh.
+Example: mob-claude start -i
+Example: mob-claude start -b my-feature --include-uncommitted-changes`,
+		Args:               cobra.ArbitraryArgs,
+		DisableFlagParsing: true,
+		RunE:               runStart,
 	}
 
 	// Next command
 	nextCmd := &cobra.Command{
-		Use:   "next",
+		Use:   "next [-- mob-flags...]",
 		Short: "Hand off to the next driver",
-		Long:  "Generates a summary, uploads to the dashboard, then runs 'mob next'.",
-		RunE:  runNext,
+		Long: `Generates a summary, uploads to the dashboard, then runs 'mob next'.
+
+Use -- to pass flags through to mob.sh.
+Example: mob-claude next -- --stay
+Example: mob-claude next -m "my note" -- --stay`,
+		Args:                  cobra.ArbitraryArgs,
+		FParseErrWhitelist:    cobra.FParseErrWhitelist{UnknownFlags: true},
+		RunE:                  runNext,
 	}
+	nextCmd.Flags().SetInterspersed(false)
 	nextCmd.Flags().StringVarP(&message, "message", "m", "", "Note for the next driver")
 	nextCmd.Flags().BoolVar(&skipSummary, "skip-summary", false, "Skip AI summary generation")
 
 	// Done command
 	doneCmd := &cobra.Command{
-		Use:   "done",
+		Use:   "done [-- mob-flags...]",
 		Short: "Complete the mob session",
-		Long:  "Generates a final summary and runs 'mob done'.",
-		RunE:  runDone,
+		Long: `Generates a final summary and runs 'mob done'.
+
+Use -- to pass flags through to mob.sh.
+Example: mob-claude done -- --no-squash`,
+		Args:                  cobra.ArbitraryArgs,
+		FParseErrWhitelist:    cobra.FParseErrWhitelist{UnknownFlags: true},
+		RunE:                  runDone,
 	}
+	doneCmd.Flags().SetInterspersed(false)
 	doneCmd.Flags().StringVarP(&message, "message", "m", "", "Final note for the session")
 	doneCmd.Flags().BoolVar(&skipSummary, "skip-summary", false, "Skip AI summary generation")
 
@@ -102,17 +120,18 @@ It manages plan files and generates AI-powered rotation summaries.`,
 }
 
 func runStart(cmd *cobra.Command, args []string) error {
+	// Handle --help/-h manually since we disabled flag parsing
+	for _, arg := range args {
+		if arg == "--help" || arg == "-h" {
+			return cmd.Help()
+		}
+	}
+
 	mobWrapper := mob.NewWrapper()
 
 	// Check mob.sh is installed
 	if err := mobWrapper.CheckMobInstalled(); err != nil {
 		return err
-	}
-
-	// Get branch name
-	branch := ""
-	if len(args) > 0 {
-		branch = args[0]
 	}
 
 	// Load config
@@ -127,9 +146,9 @@ func runStart(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to initialize plan manager: %w", err)
 	}
 
-	// Run mob start
+	// Run mob start (pass all args through to mob.sh)
 	fmt.Println("Starting mob session...")
-	if err := mobWrapper.Start(branch); err != nil {
+	if err := mobWrapper.Start("", args...); err != nil {
 		return fmt.Errorf("mob start failed: %w", err)
 	}
 
@@ -330,7 +349,7 @@ func runNext(cmd *cobra.Command, args []string) error {
 
 	// Run mob next
 	fmt.Println("\nHanding off to next driver...")
-	return mobWrapper.Next()
+	return mobWrapper.Next(args...)
 }
 
 func runDone(cmd *cobra.Command, args []string) error {
@@ -396,7 +415,7 @@ func runDone(cmd *cobra.Command, args []string) error {
 
 	// Run mob done
 	fmt.Println("\nCompleting mob session...")
-	return mobWrapper.Done()
+	return mobWrapper.Done(args...)
 }
 
 func runStatus(cmd *cobra.Command, args []string) error {

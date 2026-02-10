@@ -23,23 +23,28 @@ func NewWrapper() *Wrapper {
 	return &Wrapper{mobPath: mobPath}
 }
 
-// Start executes 'mob start' with the given branch name
-func (w *Wrapper) Start(branch string) error {
+// Start executes 'mob start' with the given branch name and any extra flags
+func (w *Wrapper) Start(branch string, extraArgs ...string) error {
 	args := []string{"start"}
 	if branch != "" {
 		args = append(args, branch)
 	}
+	args = append(args, extraArgs...)
 	return w.runPassthrough(args...)
 }
 
 // Next executes 'mob next' to hand off to the next driver
-func (w *Wrapper) Next() error {
-	return w.runPassthrough("next")
+func (w *Wrapper) Next(extraArgs ...string) error {
+	args := []string{"next"}
+	args = append(args, extraArgs...)
+	return w.runPassthrough(args...)
 }
 
 // Done executes 'mob done' to squash commits and complete the mob session
-func (w *Wrapper) Done() error {
-	return w.runPassthrough("done")
+func (w *Wrapper) Done(extraArgs ...string) error {
+	args := []string{"done"}
+	args = append(args, extraArgs...)
+	return w.runPassthrough(args...)
 }
 
 // Status executes 'mob status' and returns the output
